@@ -18,6 +18,7 @@ This is the boilerplate code that's injected into the new GitHub repo which is c
 
 From a high-level, the initial set up involves the following steps:
 
+0. [Configure OpenID Connect in AWS](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) to establish trust between AWS and Github
 1. Zip the seed-code and store in S3 for use in downstream repositories.
 2. Create a Github Access Token and store it as a secret in AWS Secrets Manager
 3. Update the Cloudformation template
