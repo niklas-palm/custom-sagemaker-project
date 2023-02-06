@@ -18,12 +18,16 @@ This is the boilerplate code that's injected into the new GitHub repo which is c
 
 From a high-level, the initial set up involves the following steps:
 
-0. [Configure OpenID Connect in AWS](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services) to establish trust between AWS and Github
+0. Configure OpenID Connect in AWS to establish trust between AWS and Github
 1. Zip the seed-code and store in S3 for use in downstream repositories.
 2. Create a Github Access Token and store it as a secret in AWS Secrets Manager
 3. Update the Cloudformation template
 4. Create a new product in AWS Service Catalogue, using the cloudformation template in the `/infra` directory. Make sure you're referencing the seed-code you zipped and uploaded to S3 i step 1, in that cloudformation template.
 5. Launch a new Sagemaker Project from within SageMaker Studio.
+
+### Configure OpenID Connect in AWS
+
+To give Github Actions permissions to assume a role in AWS, [set up OpenID Connect](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services). Update the `workflow/main.yml` to use the new IAM role.
 
 ### Zip the seed-code
 
