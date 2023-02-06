@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Toolchain template which provides the infrastructure resources needed for SageMaker Project.
+
+Parameters:
+  SageMakerProjectName:
+    Type: String
+    Description: Name of the project
+    MinLength: 1
+    MaxLength: 32
+    AllowedPattern: ^[a-zA-Z](-*[a-zA-Z0-9])*
+
+  SageMakerProjectId:
+    Type: String
+    Description: Service generated Id of the project.
+
+Resources:
+  MlOpsArtifactsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub sagemaker-project-${SageMakerProjectId} # 58 chars max/ 64 allowed
+
+  ProjectRepo:
+    Type: AWS::CodeStar::GitHubRepository
+    Properties:
+      Code:
+        S3:
+          Bucket: mlbucket13 # The buckets where you store the seed cod.
+          Key: seed-code.zip # The object key of the zipped seed code.
+      IsPrivate: True
+      RepositoryDescription: This is a description
+      RepositoryAccessToken: "{{resolve:secretsmanager:github-access-token:SecretString}}" # Github Access Token
+      RepositoryName: !Ref SageMakerProjectName
+      RepositoryOwner: niklas-palm # Repository owner
+
+  SageMakerRepository: # This ensures the repository is visible in Studio.
+    Type: AWS::SageMaker::CodeRepository
+    Properties:
+      CodeRepositoryName: !Sub "${SageMakerProjectName}-build"
+      GitConfig:
+        RepositoryUrl: !Sub "https://github.com/${ProjectRepo}.git"
+        Branch: master
+        SecretArn: arn:aws:secretsmanager:eu-west-1:934765130326:secret:github-username-pwd-0vEDhy # Replace with your ARN
+
+  ModelRegistry:
+    Type: AWS::SageMaker::ModelPackageGroup
+    Properties:
+      ModelPackageGroupName: !Sub "${SageMakerProjectName}-registry"
+      Tags:
+        - Key: sagemaker:project-id
+          Value: !Ref SageMakerProjectId
+        - Key: sagemaker:project-name
+          Value: !Ref SageMakerProjectName
+
+  ProjectIdParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "${SageMakerProjectName}-project-id"
+      Type: String
+      Value: !Ref SageMakerProjectId
+      Description: !Sub "The SageMaker Project ID of the SageMaker project: ${SageMakerProjectName}"
+
+  ProjectNameParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "${SageMakerProjectName}-project-name"
+      Type: String
+      Value: !Ref SageMakerProjectName
+      Description: !Sub "The SageMaker Project Name of the SageMaker project: ${SageMakerProjectName}"
