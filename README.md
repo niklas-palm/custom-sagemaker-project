@@ -1,6 +1,6 @@
 # Custom SageMaker Project with Github Actions
 
-This is a scaled-down, easy to start with, custom SageMaker Project using Github Actions for building the SageMaker Pipeline.
+A scaled-down, easy to start with, custom SageMaker Project using Github Actions for building the SageMaker Pipeline.
 
 ![Overview of solution](assets/custom_sagemaker_project.png "Solution overview")
 
