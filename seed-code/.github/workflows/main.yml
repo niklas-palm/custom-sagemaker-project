@@ -1,11 +1,9 @@
 # Sample workflow to access AWS resources when workflow is tied to branch
 # The workflow Creates static website using aws s3
-name: AWS example workflow
+name: Create or update SageMaker Pipeline
 on: push
 env:
-  BUCKET_NAME: "mlbucket13" # What bucket to use?
   AWS_REGION: "eu-west-1"
-  STACK_NAME: "my-test-stack" # How to get SM project name?
 # permission can be added at job level or workflow level
 permissions:
   id-token: write # This is required for requesting the JWT
