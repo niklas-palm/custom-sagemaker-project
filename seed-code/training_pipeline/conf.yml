@@ -1,8 +1,8 @@
-pipeline_name: my-test-pipeline # Name of the pipeline. (The name is prefixed by the SM Project name to ensure uniqueness)
+pipeline_name: my-test-pipeline # Name of the pipeline
 description: Brief description of the pipeline # Pipeline description
 min_accuracy: 0.7 # Model accuracy sanity check. Only register if better than this
-model_registry_name: "" # model registry name. (The name is prefixed by the SM Project name to ensure uniqueness)
-role: "" # Required. Role to be used by the SageMaker Pipeline steps.
+model_registry_name: "" # model registry name...?
+role: "arn:aws:iam::934765130326:role/service-role/AmazonSageMaker-ExecutionRole-20210826T115286" # Role to be used by the SageMaker Pipeline steps.
 tags:
   project: mlops
   service: sm-pipeline

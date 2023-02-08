@@ -1,5 +1,7 @@
 import sagemaker
 from sagemaker.inputs import TrainingInput
+from sagemaker.workflow.execution_variables import ExecutionVariables
+from sagemaker.workflow.functions import Join
 
 
 def _get_training_image():
@@ -35,6 +37,13 @@ def _get_model_source_for_evaluation(steps, isTuneStep, bucket):
         model_source = steps["train_tune_step"].get_top_model_s3_uri(
             top_k=0,
             s3_bucket=bucket,  # Bucket where to store artefacts.
+            prefix=Join(
+                on="/",
+                values=[
+                    ExecutionVariables.PIPELINE_EXECUTION_ID,
+                    "training",
+                ],
+            ),
         )
         return model_source
 
@@ -43,3 +52,14 @@ def _get_model_source_for_evaluation(steps, isTuneStep, bucket):
 
     else:
         raise Exception("Fetching the model_source went wrong. Uknown train step type")
+
+
+def _get_output_path(bucket, prefix):
+    return Join(
+        on="/",
+        values=[
+            "s3://{}".format(bucket),
+            ExecutionVariables.PIPELINE_EXECUTION_ID,
+            prefix,
+        ],
+    )

@@ -2,7 +2,6 @@ import argparse
 import json
 import yaml
 
-import sagemaker
 from sagemaker.workflow.parameters import ParameterString
 from sagemaker.workflow.pipeline import Pipeline
 
@@ -15,13 +14,16 @@ from helper_functions.steps import (
     create_model_step,
 )
 
+PREPROCESSING_DIRECTORY = "../algorithms/1-preprocessing"
+TRAINING_DIRECTORY = "../algorithms/2-training"
+EVALUATION_DIRECTORY = "../algorithms/3-evaluation"
+
 
 class CustomPipeline:
-    def __init__(self, model_registry_name, role):
+    def __init__(self, model_registry_name, role, bucket):
         self.model_registry_name = model_registry_name
-        self.prefix = "test"
         self.steps = {}
-        self.bucket = sagemaker.session.Session().default_bucket()
+        self.bucket = bucket
         self.role = role
         self.input_data = ParameterString(
             name="input_data",
@@ -30,10 +32,14 @@ class CustomPipeline:
         self.isTuneStep = False
 
     def add_preprocessing_step(self):
-        configuration = parse_yaml("../algorithms/1-preprocessing/conf.yml")
+        configuration = parse_yaml("{}/conf.yml".format(PREPROCESSING_DIRECTORY))
 
         preprocessing_step = create_processing_step(
-            self.role, self.bucket, self.prefix, configuration, self.input_data
+            self.role,
+            self.bucket,
+            configuration,
+            self.input_data,
+            PREPROCESSING_DIRECTORY,
         )
 
         self.steps["preprocessing_step"] = preprocessing_step
@@ -41,31 +47,35 @@ class CustomPipeline:
         return
 
     def add_train_or_tune_step(self):
-        configuration = parse_yaml("../algorithms/2-training/conf.yml")
+        configuration = parse_yaml("{}/conf.yml".format(TRAINING_DIRECTORY))
 
         if configuration["tune"]:
             self.isTuneStep = True
-            train_tune_step = create_tune_step(self.role, configuration, self.steps)
+            train_tune_step = create_tune_step(
+                self.bucket, self.role, configuration, self.steps
+            )
         else:
-            train_tune_step = create_training_step(self.role, configuration, self.steps)
+            train_tune_step = create_training_step(
+                self.bucket, self.role, configuration, self.steps
+            )
 
         self.steps["train_tune_step"] = train_tune_step
 
         return
 
-    def add_postprocessing_step(self):
-        configuration = parse_yaml("../algorithms/3-postprocessing/conf.yml")
+    def add_evaluation_step(self):
+        configuration = parse_yaml("{}/conf.yml".format(EVALUATION_DIRECTORY))
 
-        postprocessing_step = create_evaluate_step(
+        evaluation_step = create_evaluate_step(
             self.role,
             self.bucket,
             configuration,
             self.isTuneStep,
             self.steps,
-            self.prefix,
+            EVALUATION_DIRECTORY,
         )
 
-        self.steps["postprocessing_step"] = postprocessing_step
+        self.steps["evaluation_step"] = evaluation_step
 
         return
 
@@ -121,6 +131,14 @@ def get_args(argparse):
         help="String, SageMaker Project ID",
     )
 
+    parser.add_argument(
+        "-bucket",
+        "--bucket",
+        dest="bucket",
+        default=None,
+        help="Project bucket",
+    )
+
     return vars(parser.parse_args())
 
 
@@ -144,6 +162,10 @@ if __name__ == "__main__":
     configuration = parse_yaml("./conf.yml")
 
     args = get_args(argparse)
+
+    bucket = args["bucket"]
+    if not bucket:
+        raise Exception("Bucket needs to be provided")
 
     role = configuration.get("role")
     if not role:
@@ -176,16 +198,13 @@ if __name__ == "__main__":
     print("\n###### Tags:")
     print(tag_list)
 
-    pipeline = CustomPipeline(
-        model_registry_name,
-        role,
-    )
+    pipeline = CustomPipeline(model_registry_name, role, bucket)
 
     min_accuracy = configuration.get("min_accuracy", 0.7)
 
     pipeline.add_preprocessing_step()
     pipeline.add_train_or_tune_step()
-    pipeline.add_postprocessing_step()
+    pipeline.add_evaluation_step()
     pipeline.add_register_model_step(float(min_accuracy))
 
     response = pipeline.create_pipeline(tag_list, configuration)

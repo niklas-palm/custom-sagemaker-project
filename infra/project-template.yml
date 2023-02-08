@@ -66,3 +66,11 @@ Resources:
       Type: String
       Value: !Ref SageMakerProjectName
       Description: !Sub "The SageMaker Project Name of the SageMaker project: ${SageMakerProjectName}"
+
+  BucketParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub "${SageMakerProjectName}-bucket"
+      Type: String
+      Value: !Ref MlOpsArtifactsBucket
+      Description: !Sub "The bucket for all artefacts of the SageMaker project: ${SageMakerProjectName}"

@@ -1,6 +1,6 @@
 # Sample workflow to access AWS resources when workflow is tied to branch
 # The workflow Creates static website using aws s3
-name: Create or update SageMaker Pipeline
+name: AWS example workflow
 on: push
 env:
   AWS_REGION: "eu-west-1"
@@ -29,10 +29,12 @@ jobs:
           echo "REPO=${REPO}" >> $GITHUB_ENV
           echo "SAGEMAKER_PROJECT_ID=$(aws ssm get-parameters --names ${REPO}-project-id --query "Parameters[0].Value" --output text)" >> $GITHUB_ENV
           echo "SAGEMAKER_PROJECT_NAME=$(aws ssm get-parameters --names ${REPO}-project-name --query "Parameters[0].Value" --output text)" >> $GITHUB_ENV
+          echo "BUCKET=$(aws ssm get-parameters --names ${REPO}-bucket --query "Parameters[0].Value" --output text)" >> $GITHUB_ENV
       - name: Build SageMaker Pipeline
         run: |
           cd training_pipeline
           pip install -r requirements.txt
           python build.py \
             --project-name ${SAGEMAKER_PROJECT_NAME} \
-            --tags "{\"sagemaker:project-name\":\"${SAGEMAKER_PROJECT_NAME}\", \"sagemaker:project-id\": \"${SAGEMAKER_PROJECT_ID}\"}"
+            --tags "{\"sagemaker:project-name\":\"${SAGEMAKER_PROJECT_NAME}\", \"sagemaker:project-id\": \"${SAGEMAKER_PROJECT_ID}\"}" \
+            --bucket ${BUCKET}

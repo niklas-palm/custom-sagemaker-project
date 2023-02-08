@@ -21,10 +21,13 @@ from helper_functions._utils import (
     _get_model_source_for_evaluation,
     _get_training_image,
     _get_training_inputs,
+    _get_output_path,
 )
 
 
-def create_processing_step(role, bucket, prefix, configuration, input_data):
+def create_processing_step(
+    role, bucket, configuration, input_data, PREPROCESSING_DIRECTORY
+):
     sklearn_processor = SKLearnProcessor(
         framework_version="0.23-1",
         role=role,
@@ -45,85 +48,47 @@ def create_processing_step(role, bucket, prefix, configuration, input_data):
             ProcessingOutput(
                 output_name="train",
                 source="/opt/ml/processing/train",
-                destination=Join(
-                    on="/",
-                    values=[
-                        "s3://{}".format(bucket),
-                        prefix,
-                        ExecutionVariables.PIPELINE_EXECUTION_ID,
-                        "train",
-                    ],
-                ),
+                destination=_get_output_path(bucket, "processing/train"),
             ),
             ProcessingOutput(
                 output_name="validation",
                 source="/opt/ml/processing/validation",
-                destination=Join(
-                    on="/",
-                    values=[
-                        "s3://{}".format(bucket),
-                        prefix,
-                        ExecutionVariables.PIPELINE_EXECUTION_ID,
-                        "validation",
-                    ],
-                ),
+                destination=_get_output_path(bucket, "processing/validation"),
             ),
             ProcessingOutput(
                 output_name="test",
                 source="/opt/ml/processing/test",
-                destination=Join(
-                    on="/",
-                    values=[
-                        "s3://{}".format(bucket),
-                        prefix,
-                        ExecutionVariables.PIPELINE_EXECUTION_ID,
-                        "test",
-                    ],
-                ),
+                destination=_get_output_path(bucket, "processing/test"),
             ),
             ProcessingOutput(
                 output_name="train_data_with_headers",
                 source="/opt/ml/processing/train_data_with_headers",
-                destination=Join(
-                    on="/",
-                    values=[
-                        "s3://{}".format(bucket),
-                        prefix,
-                        ExecutionVariables.PIPELINE_EXECUTION_ID,
-                        "train_data_with_headers",
-                    ],
+                destination=_get_output_path(
+                    bucket, "processing/train_data_with_headers"
                 ),
             ),
             ProcessingOutput(
                 output_name="data_baseline_with_headers",
                 source="/opt/ml/processing/data_baseline_with_headers",
-                destination=Join(
-                    on="/",
-                    values=[
-                        "s3://{}".format(bucket),
-                        prefix,
-                        ExecutionVariables.PIPELINE_EXECUTION_ID,
-                        "data_baseline_with_headers",
-                    ],
+                destination=_get_output_path(
+                    bucket, "processing/data_baseline_with_headers"
                 ),
             ),
         ],
-        code="../algorithms/1-preprocessing/{}".format(configuration["script"]),
+        code="{}/{}".format(PREPROCESSING_DIRECTORY, configuration["script"]),
     )
 
     return step_preprocess_data
 
 
-def create_training_step(role, configuration, steps):
-    """
-    TODO: write doc string
-    """
+def create_training_step(bucket, role, configuration, steps):
 
     # Fetch container to use for training
     image_uri = _get_training_image()
 
     xgb_estimator = Estimator(
         image_uri=image_uri,
+        output_path=_get_output_path(bucket, "training"),
         instance_type=configuration["instance_type"],
         instance_count=configuration["num_instances"],
         role=role,
@@ -152,10 +117,7 @@ def create_training_step(role, configuration, steps):
     return step_train_model
 
 
-def create_tune_step(role, configuration, steps):
-    """
-    TODO: write doc string
-    """
+def create_tune_step(bucket, role, configuration, steps):
 
     # Fetch container to use for training
     image_uri = _get_training_image()
@@ -164,6 +126,7 @@ def create_tune_step(role, configuration, steps):
     # The object contains information about what container to use, what instance type etc.
     estimator = Estimator(
         image_uri=image_uri,
+        output_path=_get_output_path(bucket, "training"),
         instance_type=configuration["instance_type"],
         instance_count=configuration["num_instances"],
         role=role,
@@ -198,14 +161,10 @@ def create_tune_step(role, configuration, steps):
     return step_tuning
 
 
-def create_evaluate_step(role, bucket, configuration, isTuneStep, steps, prefix):
-    """
-    TODO: write doc string
-    """
+def create_evaluate_step(
+    role, bucket, configuration, isTuneStep, steps, EVALUATION_DIRECTORY
+):
 
-    # Fetch container to use for training
-    # TODO: Separate container fetching here and for training.
-    # # Needs (?) to be the same as in training.
     image_uri = _get_training_image()
 
     # Create ScriptProcessor object.
@@ -246,31 +205,15 @@ def create_evaluate_step(role, bucket, configuration, isTuneStep, steps, prefix)
             ProcessingOutput(
                 output_name="evaluation",
                 source="/opt/ml/processing/evaluation",
-                destination=Join(
-                    on="/",
-                    values=[
-                        "s3://{}".format(bucket),
-                        prefix,
-                        ExecutionVariables.PIPELINE_EXECUTION_ID,
-                        "evaluation-report",
-                    ],
-                ),
+                destination=_get_output_path(bucket, "evaluation/evaluation-report"),
             ),
             ProcessingOutput(
                 output_name="sample_payload",
                 source="/opt/ml/processing/sample",
-                destination=Join(
-                    on="/",
-                    values=[
-                        "s3://{}".format(bucket),
-                        prefix,
-                        ExecutionVariables.PIPELINE_EXECUTION_ID,
-                        "sample_payload",
-                    ],
-                ),
+                destination=_get_output_path(bucket, "sample_payload"),
             ),
         ],
-        code="../algorithms/3-postprocessing/{}".format(configuration["script"]),
+        code="{}/{}".format(EVALUATION_DIRECTORY, configuration["script"]),
         property_files=[evaluation_report],
     )
 
@@ -298,7 +241,7 @@ def create_model_step(
             s3_uri=Join(
                 on="/",
                 values=[
-                    steps["postprocessing_step"]
+                    steps["evaluation_step"]
                     .properties.ProcessingOutputConfig.Outputs["evaluation"]
                     .S3Output.S3Uri,
                     "evaluation.json",
@@ -322,7 +265,7 @@ def create_model_step(
         sample_payload_url=Join(
             on="/",
             values=[
-                steps["postprocessing_step"]
+                steps["evaluation_step"]
                 .properties.ProcessingOutputConfig.Outputs["sample_payload"]
                 .S3Output.S3Uri,
                 "payload.csv",
@@ -335,7 +278,6 @@ def create_model_step(
         step_args=register_args,
     )
 
-    # TODO Fetch this properly, don't re-create it....
     evaluation_report = PropertyFile(
         name="EvaluationReport", output_name="evaluation", path="evaluation.json"
     )
@@ -344,9 +286,9 @@ def create_model_step(
     # Models with a test accuracy lower than the condition will not be registered with the model registry.
     cond_gte = ConditionGreaterThanOrEqualTo(
         left=JsonGet(
-            step_name=steps["postprocessing_step"].name,
+            step_name=steps["evaluation_step"].name,
             property_file=evaluation_report,
-            json_path="binary_classification_metrics.accuracy.value",  # TODO How to make this more dynamic?
+            json_path="binary_classification_metrics.accuracy.value",
         ),
         right=float(min_accuracy),
     )
