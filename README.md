@@ -6,13 +6,21 @@ A scaled-down, easy to start with, custom SageMaker Project using Github Actions
 
 ## Overview
 
+This project contains the resources to set up a custom SageMaker Project that creates a CI/CD pipeline using Github Actions, that builds a SageMaker Pipeline in AWS.
+
+It contains 2 general components.
+
 ### `/infra`
 
-The cloudformation template used by the Service Catalogue. This is the template that is deployed when a new SageMaker Project is created from within SageMaker Studio.
+The cloudformation template used by the Service Catalogue. You create a product in the Service Catalogue, and provide this template as the product. This is the template that is deployed when a new SageMaker Project is created from within SageMaker Studio.
 
 ### `/seed-code`
 
 This is the boilerplate code that's injected into the new GitHub repo which is created when a new SageMaker Project is created.
+
+## Prerequisites
+
+- A SageMaker Studio domain set up
 
 ## Installation
 
