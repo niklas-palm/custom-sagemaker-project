@@ -48,7 +48,7 @@ zip -r ../seed-code.zip .
 and upload it to s3
 
 ```bash
-aws s3 cp s3://<your-bucket>/seed-code.zip
+aws s3 cp seed-code.zip s3://<your-bucket>/seed-code.zip
 ```
 
 ### Github Access Token
