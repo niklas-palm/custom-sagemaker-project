@@ -1,6 +1,8 @@
 # Custom Sagemaker Project
 
-Scaled down easy to start with custom SageMaker Project that creates a SageMaker Pipeline based on the contents of the `algorithms` directory
+Scaled down easy to start with custom SageMaker Project that creates a SageMaker Pipeline based on the contents of the `algorithms` directory, using Github Actions. Below is a diagram of the system.
+
+![Overview of solution](assets/custom_sagemaker_project.png "Solution overview")
 
 ## Overview
 
