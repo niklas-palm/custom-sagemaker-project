@@ -1,0 +1,7 @@
+role: "arn:aws:iam::934765130326:role/service-role/AmazonSageMaker-ExecutionRole-20210826T115286"
+model_registry_name: "" # model registry name?
+# StageName: prod # What stage property
+EndpointInstanceType: "ml.m5.xlarge"
+tags:
+  project: mlops
+  service: sm-pipeline

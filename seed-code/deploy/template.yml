@@ -1,0 +1,147 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description:
+  This template deploys a SageMaker endpoint and data drift monitoring job, running everuy hour.
+  It also deploys a Lambda function that continuously invokes the endpoint for demo purposes,
+  to generate data.
+Parameters:
+  SageMakerProjectName:
+    Type: String
+    Description: Name of the project
+    AllowedPattern: ^[a-zA-Z](-*[a-zA-Z0-9])*
+  ModelExecutionRoleArn:
+    Type: String
+    Description: Execution role used for deploying the model.
+  ModelPackageName:
+    Type: String
+    Description: The trained Model Package Name
+  StageName:
+    Type: String
+    Description:
+      The name for a project pipeline stage, such as Staging or Prod, for
+      which resources are provisioned and deployed.
+    Default: prod
+  EndpointInstanceType:
+    Type: String
+    Description: The ML compute instance type for the endpoint.
+  Bucket:
+    Type: String
+  DataQualityStatisticsS3Uri:
+    Type: String
+  DataQualityConstraintsS3Uri:
+    Type: String
+
+Resources:
+  Model:
+    Type: AWS::SageMaker::Model
+    Properties:
+      Containers:
+        - ModelPackageName: !Ref ModelPackageName
+      ExecutionRoleArn: !Ref ModelExecutionRoleArn
+
+  EndpointConfig:
+    Type: AWS::SageMaker::EndpointConfig
+    Properties:
+      ProductionVariants:
+        - InitialInstanceCount: 1
+          InitialVariantWeight: 1.0
+          InstanceType: !Ref EndpointInstanceType
+          ModelName: !GetAtt Model.ModelName
+          VariantName: AllTraffic
+      DataCaptureConfig:
+        EnableCapture: True
+        InitialSamplingPercentage: 100
+        DestinationS3Uri: !Sub s3://${Bucket}/monitoring
+        CaptureOptions:
+          - CaptureMode: Input
+          - CaptureMode: Output
+        CaptureContentTypeHeader:
+          CsvContentTypes:
+            - "text/csv"
+
+  Endpoint:
+    Type: AWS::SageMaker::Endpoint
+    Properties:
+      EndpointName: !Sub ${SageMakerProjectName}-${StageName}
+      EndpointConfigName: !GetAtt EndpointConfig.EndpointConfigName
+      Tags:
+        - Key: sagemaker:project-name
+          Value: !Ref SageMakerProjectName
+        - Key: sagemaker:deployment-stage
+          Value: !Ref StageName
+
+  # Invokes the endpoint with hard-coded samples to generate some monitoring data, for demo purposes.
+  InvokeEndpointFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda_function.lambda_handler
+      CodeUri: "s3://custom-project-bucket/lambdaFunction-invoke-endpoint.zip"
+      Description: Invokes the endpoint on a schedule
+      Tracing: Active
+      Timeout: 5
+      MemorySize: 256
+      Runtime: python3.9
+      Environment:
+        Variables:
+          ENDPOINT_NAME: !GetAtt Endpoint.EndpointName
+      Events:
+        InvokeApiSchedule:
+          Type: Schedule
+          Properties:
+            Schedule: "rate(1 minute)"
+            Description: Invokes endpoint on schedule
+            Enabled: True
+      Policies:
+        - Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: sagemaker:InvokeEndpoint
+              Resource: "*"
+
+  # ### Monitoring
+  DataQualityJobDefinition:
+    Type: AWS::SageMaker::DataQualityJobDefinition
+    Properties:
+      DataQualityAppSpecification:
+        ImageUri: 468650794304.dkr.ecr.eu-west-1.amazonaws.com/sagemaker-model-monitor-analyzer
+      DataQualityJobInput:
+        EndpointInput:
+          EndpointName: !GetAtt Endpoint.EndpointName
+          LocalPath: /opt/ml/processing/input/data_quality_input
+      DataQualityJobOutputConfig:
+        MonitoringOutputs:
+          - S3Output:
+              LocalPath: /opt/ml/processing/output/data_quality_output
+              S3UploadMode: EndOfJob
+              S3Uri: !Sub "s3://${Bucket}/monitoringoutput"
+      JobResources:
+        ClusterConfig:
+          InstanceCount: 1
+          InstanceType: ml.m5.xlarge
+          VolumeSizeInGB: 20
+      RoleArn: !Ref ModelExecutionRoleArn
+      DataQualityBaselineConfig:
+        ConstraintsResource:
+          S3Uri: !Ref DataQualityConstraintsS3Uri
+        StatisticsResource:
+          S3Uri: !Ref DataQualityStatisticsS3Uri
+      StoppingCondition:
+        MaxRuntimeInSeconds: 2400
+      Tags:
+        - Key: sagemaker:project-name
+          Value: !Ref SageMakerProjectName
+
+  DataQualityMonitoringSchedule:
+    Type: AWS::SageMaker::MonitoringSchedule
+    Properties:
+      MonitoringScheduleConfig:
+        MonitoringJobDefinitionName: !GetAtt DataQualityJobDefinition.JobDefinitionName
+        MonitoringType: DataQuality
+        ScheduleConfig:
+          ScheduleExpression: cron(0 * ? * * *)
+      MonitoringScheduleName: !Sub ${SageMakerProjectName}-dataquality-monitoring-schedule
+      Tags:
+        - Key: sagemaker:project-name
+          Value: !Ref SageMakerProjectName
+    DependsOn:
+      - DataQualityJobDefinition
