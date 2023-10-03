@@ -1,8 +1,0 @@
-step_name: train-tune-step # Name of the step in SageMaker Pipelines
-script: "" # What script to run
-description: Trains the model # Step description
-instance_type: ml.m5.xlarge # What instance type to use
-num_instances: 1 # How many instances to use. Algorithm must support parallel processing if > 1.
-tune: true # true | false. If true, runs a tune step, with several training jobs instead of one training job
-max_jobs: 42 # How many jobs to run in total if tune is set to true
-parallel_jobs: 3 # How many jobs to run in parallell if tune is set to true

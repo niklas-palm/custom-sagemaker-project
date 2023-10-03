@@ -1,5 +1,0 @@
-step_name: evaluation-step # Name of the step in SageMaker Pipelines
-script: evaluate.py # What script to run
-description: Runs an evaluation job and generates performance metrics # Step description
-instance_type: ml.m5.xlarge # What instance type to use
-num_instances: 1 # How many instances to use. Algorithm must support parallel processing if > 1.
