@@ -1,0 +1,59 @@
+name: Deploys a SageMaker endpoint and configures monitoring.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "deploy/**"
+      - ".github/workflows/deploy.yml"
+
+env:
+  AWS_REGION: "eu-west-1"
+# permission can be added at job level or workflow level
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read # This is required for actions/checkout
+defaults:
+  run:
+    working-directory: ./deploy
+jobs:
+  DeployPipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git clone the repository
+        uses: actions/checkout@v3
+      - name: configure aws credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::934765130326:role/github-actions-role # Instructions: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Fetch environment variables
+        run: |
+          REPO=${GITHUB_REPOSITORY##*/}
+          echo "REPO=${REPO}" >> $GITHUB_ENV
+          echo "SAGEMAKER_PROJECT_ID=$(aws ssm get-parameters --names ${REPO}-project-id --query "Parameters[0].Value" --output text)" >> $GITHUB_ENV
+          echo "SAGEMAKER_PROJECT_NAME=$(aws ssm get-parameters --names ${REPO}-project-name --query "Parameters[0].Value" --output text)" >> $GITHUB_ENV
+          echo "BUCKET=$(aws ssm get-parameters --names ${REPO}-bucket --query "Parameters[0].Value" --output text)" >> $GITHUB_ENV
+      - name: Build and deploy SageMaker endpoint with cloudformation
+        uses: aws-actions/setup-sam@v2
+      - run: |
+          pip install -r requirements.txt
+
+          python build.py \
+            --project-name ${SAGEMAKER_PROJECT_NAME} \
+            --bucket ${BUCKET}
+            # --tags "{\"sagemaker:project-name\":\"${SAGEMAKER_PROJECT_NAME}\", \"sagemaker:project-id\": \"${SAGEMAKER_PROJECT_ID}\"}" \
+
+          cat params.txt
+
+          sam build --use-container -t template.yml
+          sam deploy \
+            --parameter-overrides $(cat params.txt) \
+            --no-confirm-changeset \
+            --no-fail-on-empty-changeset \
+            --stack-name deploy-${REPO} \
+            --capabilities CAPABILITY_IAM
+            --resolve-s3

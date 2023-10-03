@@ -1,12 +1,19 @@
-# Sample workflow to access AWS resources when workflow is tied to branch
-name: AWS example workflow
-on: push
+name: Builds a SageMaker Pipeline.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "build/**"
+      - ".github/workflows/build.yml"
 env:
   AWS_REGION: "eu-west-1"
 # permission can be added at job level or workflow level
 permissions:
   id-token: write # This is required for requesting the JWT
   contents: read # This is required for actions/checkout
+defaults:
+  run:
+    working-directory: ./build
 jobs:
   BuildPipeline:
     runs-on: ubuntu-latest
