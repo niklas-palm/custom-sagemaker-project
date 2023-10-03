@@ -2,7 +2,7 @@
 
 Lean MLOps on AWS, using a custom SageMaker Project with Github Actions for building a SageMaker model training pipeline, and deploying a real-time endpoint using CloudFormation.
 
-![Overview of solution](assets/custom_sagemaker_project.png "Solution overview")
+![Overview of solution](assets/lean_mlops.png "Solution overview")
 
 ## Overview
 
