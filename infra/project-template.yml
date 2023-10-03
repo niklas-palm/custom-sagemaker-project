@@ -32,14 +32,14 @@ Resources:
       RepositoryName: !Ref SageMakerProjectName
       RepositoryOwner: niklas-palm # Repository owner
 
-  SageMakerRepository: # This ensures the repository is visible in Studio.
-    Type: AWS::SageMaker::CodeRepository
-    Properties:
-      CodeRepositoryName: !Sub "${SageMakerProjectName}-build"
-      GitConfig:
-        RepositoryUrl: !Sub "https://github.com/${ProjectRepo}.git"
-        Branch: master
-        SecretArn: arn:aws:secretsmanager:eu-west-1:934765130326:secret:github-username-pwd-0vEDhy # Replace with your ARN
+  # SageMakerRepository: # This ensures the repository is visible in Studio.
+  #   Type: AWS::SageMaker::CodeRepository
+  #   Properties:
+  #     CodeRepositoryName: !Sub "${SageMakerProjectName}-build"
+  #     GitConfig:
+  #       RepositoryUrl: !Sub "https://github.com/${ProjectRepo}.git"
+  #       Branch: main
+  #       SecretArn: arn:aws:secretsmanager:eu-west-1:934765130326:secret:github-username-pwd-0vEDhy # Replace with your ARN
 
   ModelRegistry:
     Type: AWS::SageMaker::ModelPackageGroup
