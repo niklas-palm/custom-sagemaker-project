@@ -1,19 +1,13 @@
-# Custom Sagemaker Project
+# Custom SageMaker Project with Github Actions
 
-Scaled down easy to start with custom SageMaker Project that creates a SageMaker Pipeline based on the contents of the `algorithms` directory, using Github Actions. Below is a diagram of the system.
+A scaled-down, easy to start with, custom SageMaker Project using Github Actions for building the SageMaker Pipeline, and for deploying a real-time SageMaker endpoint.
 
 ![Overview of solution](assets/custom_sagemaker_project.png "Solution overview")
 
-## Overview
+### `/build`
 
-### `algorithms/`
+All the relevant pieces for a data scientist to explore the data and train a model in a notebook environment, and ultimately check the relevant pieces of code in to automatically create a reusable model training pipeline with SageMaker pipelines that registers the model with the SageMaker model registry
 
-All the steps of the SageMaker Pipeline. Each sub-directory contains the script to run and some configuration for that particular step.
+### `/deploy`
 
-### `notebooks/`
-
-All the notebooks of the project. Used by the data scientist for exploratory data analysis. Write the relevant scripts from the notebook into the corresponding directory under `algorithms`
-
-### `training_pipeline/`
-
-The `build.py` script is run in the CD pipeline, creating or updating the SageMaker Pipeline that's defined in the `algorithms` directory. Iterate on this code to add support more configuration options, more step types, custom images and so on.
+The build and deployment of the real-time SageMaker endpoint with data-drift and explainability monitoring. The build script is run in Github actions to create the correct parameters file, which is then used to deploy the cloudformation template
