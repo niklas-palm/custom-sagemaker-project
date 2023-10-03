@@ -1,6 +1,6 @@
 # Custom SageMaker Project with Github Actions
 
-A scaled-down, easy to start with, custom SageMaker Project using Github Actions for building the SageMaker Pipeline.
+Lean MLOps on AWS, using a custom SageMaker Project with Github Actions for building a SageMaker model training pipeline, and deploying a real-time endpoint using CloudFormation.
 
 ![Overview of solution](assets/custom_sagemaker_project.png "Solution overview")
 
@@ -21,6 +21,7 @@ This is the boilerplate code that's injected into the new GitHub repo which is c
 ## Prerequisites
 
 - A SageMaker Studio domain set up
+- SageMaker Projects enabled in that domain.
 
 ## Installation
 
@@ -53,7 +54,7 @@ aws s3 cp seed-code.zip s3://<your-bucket>/seed-code.zip
 
 ### Github Access Token
 
-Create two secret in AWS Secrets Manager with the Github Access Token to enable AWS to create GitHub repositories. and to connect the repository to SageMaker Studio
+Create two secrets in AWS Secrets Manager with the Github Access Token to enable AWS to create GitHub repositories. and to connect the repository to SageMaker Studio
 
 ```bash
 aws secretsmanager create-secret --name github-access-token --secret-string 'ACCESS_TOKEN_GOES_HERE'
@@ -87,7 +88,3 @@ Follow the instructions [here](https://docs.aws.amazon.com/sagemaker/latest/dg/s
 ### Launch a new SageMaker Project
 
 In SageMaker Studio, under `Create Project` you should see your custom project under "Organization templates". Launching it deploys the cloudformation.
-
-#### Disclaimer
-
-As of writing this, the integration between SageMaker Studio and Github is bugged. The repo shows up in the SageMaker Project, but it's not possible to clone.
