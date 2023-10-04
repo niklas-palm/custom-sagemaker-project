@@ -1,5 +1,6 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Toolchain template which provides the infrastructure resources needed for SageMaker Project.
+Description: |
+  Sets up SM Project related resources. This template is deployed when an SM projected is created.
 
 Parameters:
   SageMakerProjectName:
@@ -35,7 +36,7 @@ Resources:
   SageMakerRepository: # This ensures the repository is visible in Studio.
     Type: AWS::SageMaker::CodeRepository
     Properties:
-      CodeRepositoryName: !Sub "${SageMakerProjectName}-build"
+      CodeRepositoryName: !Sub "${SageMakerProjectName}"
       GitConfig:
         RepositoryUrl: !Sub "https://github.com/${ProjectRepo}.git"
         Branch: main
