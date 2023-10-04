@@ -60,12 +60,6 @@ Create two secrets in AWS Secrets Manager with the Github Access Token to enable
 aws secretsmanager create-secret --name github-access-token --secret-string 'ACCESS_TOKEN_GOES_HERE'
 ```
 
-```bash
-aws secretsmanager create-secret --name github-user-pwd --secret-string '{"username":"<GITHUB_USERNAME>","password":"<ACCESS_TOKEN"}'
-```
-
-Note the ARN of the second secret created above, as it needs to be referenced in the `project-template.yml` cloudformation
-
 ### Update Cloudformation template
 
 You need to update some parameters in the Cloudformation Template to match your enviromment.
@@ -74,12 +68,6 @@ You need to update some parameters in the Cloudformation Template to match your 
 
 - You need to update the bucket where you store the zipped seed code and the related object key.
 - You need to update the respository owner
-
-#### The `SageMakerRepository` resource.
-
-(note: this resource is only used to have the repo appear in SM Studio. You can delete this resource if you wish)
-
-- You need to enter the ARN of the Secret Manager secret you created with the github username and password.
 
 ### Create a new product in Service Catalogue
 
