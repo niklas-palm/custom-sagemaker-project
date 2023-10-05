@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
 Description: |
   Sets up SM Project related resources. This template is deployed when an SM projected is created.
 
@@ -13,6 +14,16 @@ Parameters:
   SageMakerProjectId:
     Type: String
     Description: Service generated Id of the project.
+
+  RepoOwner:
+    Type: String
+    Description: Github Repository owner
+    Default: niklas-palm
+
+  RepoBranch:
+    Type: String
+    Description: Github Repository branch
+    Default: master # Because AWS::CodeStar::GitHubRepository automatically uses master
 
 Resources:
   MlOpsArtifactsBucket:
@@ -31,7 +42,7 @@ Resources:
       RepositoryDescription: This is a description
       RepositoryAccessToken: "{{resolve:secretsmanager:github-access-token:SecretString}}" # Github Access Token
       RepositoryName: !Ref SageMakerProjectName
-      RepositoryOwner: niklas-palm # Repository owner
+      RepositoryOwner: !Ref RepoOwner
 
   SageMakerRepository: # This ensures the repository is visible in Studio.
     Type: AWS::SageMaker::CodeRepository
@@ -39,7 +50,7 @@ Resources:
       CodeRepositoryName: !Sub "${SageMakerProjectName}"
       GitConfig:
         RepositoryUrl: !Sub "https://github.com/${ProjectRepo}.git"
-        Branch: main
+        Branch: !Ref RepoBranch
 
   ModelRegistry:
     Type: AWS::SageMaker::ModelPackageGroup
@@ -74,3 +85,77 @@ Resources:
       Type: String
       Value: !Ref MlOpsArtifactsBucket
       Description: !Sub "The bucket for all artefacts of the SageMaker project: ${SageMakerProjectName}"
+
+  MyFunctionLogGroup: #To ensure Logs are deleted after a while.
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${StartDeploymentLambda}"
+      RetentionInDays: 7
+
+  StartDeploymentLambda:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python3.9
+      Description: A Lambda function to trigger a GitHub Actions workflow
+      Environment:
+        Variables:
+          repository_owner: !Ref RepoOwner
+          repository_name: !Ref SageMakerProjectName
+          workflow_name: deploy.yml
+          branch: !Ref RepoBranch
+          token: "{{resolve:secretsmanager:github-access-token:SecretString}}"
+      Events:
+        ModelApprovedOrRejected:
+          Type: EventBridgeRule
+          Properties:
+            Pattern:
+              source:
+                - "aws.sagemaker"
+              detail-type:
+                - "SageMaker Model Package State Change"
+              detail:
+                ModelPackageGroupName:
+                  - !Sub "${SageMakerProjectName}-registry"
+                ModelApprovalStatus:
+                  - anything-but:
+                      - PendingManualApproval
+      InlineCode: |
+        import http.client
+        import json
+        import os
+
+        repository_owner = os.environ['repository_owner']
+        repository_name = os.environ['repository_name']
+        workflow_name = os.environ['workflow_name']
+        token = os.environ['token']
+        branch = os.environ['branch']
+
+        api_url = f"/repos/{repository_owner}/{repository_name}/actions/workflows/{workflow_name}/dispatches"
+        payload = {
+            "ref": branch,
+        }
+        headers = {
+            "Accept": "application/vnd.github.v3+json",
+            "Authorization": f"token {token}",
+            "Content-Type": "application/json",
+            "User-Agent": "MyGitHubWorkflowTrigger/1.0"
+        }
+
+        def lambda_handler(event, context):
+
+          connection = http.client.HTTPSConnection("api.github.com")
+
+          try:
+              connection.request("POST", api_url, json.dumps(payload), headers=headers)
+              response = connection.getresponse()
+
+              if response.status == 204:
+                  print("Workflow triggered successfully!")
+              else:
+                  print(f"Failed to trigger the workflow. Status code: {response.status}")
+                  print(response.read())
+          except Exception as e:
+              print(f"An error occurred: {e}")
+          finally:
+              connection.close()
