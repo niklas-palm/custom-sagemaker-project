@@ -54,7 +54,7 @@ aws s3 cp seed-code.zip s3://<your-bucket>/seed-code.zip
 
 ### Github Access Token
 
-Create two secrets in AWS Secrets Manager with the Github Access Token to enable AWS to create GitHub repositories. and to connect the repository to SageMaker Studio
+Create a secret in AWS Secrets Manager with the Github Access Token to enable AWS to create GitHub repositories, and to allow the lambda function to use the github API to start the deployment workflow.
 
 ```bash
 aws secretsmanager create-secret --name github-access-token --secret-string 'ACCESS_TOKEN_GOES_HERE'
