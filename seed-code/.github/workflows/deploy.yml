@@ -55,5 +55,5 @@ jobs:
             --no-confirm-changeset \
             --no-fail-on-empty-changeset \
             --stack-name deploy-${REPO} \
-            --capabilities CAPABILITY_IAM
+            --capabilities CAPABILITY_IAM \
             --resolve-s3
