@@ -36,7 +36,7 @@ From a high-level, the initial set up involves the following steps:
 
 ### Configure OpenID Connect in AWS
 
-To give Github Actions permissions to assume a role in AWS, [set up OpenID Connect](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services). Update the `workflow/main.yml` to use the new IAM role.
+To give Github Actions permissions to assume a role in AWS, [set up OpenID Connect](https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services). Update the `.github/workflow/build.yml` and `.github/workflow/deploy.yml` to assume the correct IAM role.
 
 ### Zip the seed-code
 
@@ -63,6 +63,10 @@ aws secretsmanager create-secret --name github-access-token --secret-string 'ACC
 ### Update Cloudformation template
 
 You need to update some parameters in the Cloudformation Template to match your enviromment.
+
+#### Parameters resource.
+
+There are some default cloudformation parameters that needs to be updated.
 
 #### The `ProjectRepo` resource.
 
